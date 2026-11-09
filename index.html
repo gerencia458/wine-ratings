@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#120e10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wine Ratings">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Wine Ratings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: one column ledger. Summary strip, then wines grouped by producer + name with vintage rows beneath. */
+/* Single dark theme by request. */
+:root, :root[data-theme="light"], :root[data-theme="dark"] {
+  --bg: #120e10;
+  --surface: #1c1619;
+  --ink: #f1eaec;
+  --muted: #a89ea2;
+  --line: #342a2e;
+  --accent: #d1606f;
+  --accent-ink: #1a0b0f;
+  --accent-soft: #3b1e25;
+  --good: #72c393;
+  --warn: #e3b355;
+  --low: #8f8689;
+  --font-display: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 760px; margin: 0 auto; padding: 20px max(16px, env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); display: grid; gap: 18px; }
+h1, h2 { font-family: var(--font-display); font-weight: 600; margin: 0; text-wrap: balance; }
+h1 { font-size: 2.1rem; line-height: 1.05; letter-spacing: .005em; }
+.num { font-variant-numeric: tabular-nums; }
+
+.hero {
+  position: relative; margin: -20px -16px 0; min-height: calc(240px + env(safe-area-inset-top)); padding: calc(24px + env(safe-area-inset-top)) 20px 22px;
+  display: flex; align-items: end;
+  background:
+    linear-gradient(180deg, rgb(18 14 16 / .15) 0%, rgb(18 14 16 / .35) 45%, var(--bg) 100%),
+    url("img/hero.jpg") center 38% / cover no-repeat;
+}
+.hero h1 { font-size: 2.6rem; text-shadow: 0 2px 18px rgb(0 0 0 / .6); }
+.hero p { margin: 4px 0 0; color: #d9cfd2; font-size: .9rem; text-shadow: 0 1px 8px rgb(0 0 0 / .7); }
+.strip {
+  display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory;
+  margin: 0 -16px; padding: 0 16px 4px; scrollbar-width: none;
+}
+.strip::-webkit-scrollbar { display: none; }
+.strip img {
+  height: 150px; width: auto; flex: 0 0 auto; border-radius: 10px; scroll-snap-align: start;
+  border: 1px solid var(--line); filter: saturate(.85) brightness(.92);
+}
+@media (min-width: 640px) {
+  .hero { min-height: 320px; margin-top: 0; border-radius: 0 0 16px 16px; }
+  .strip img { height: 180px; }
+}
+
+button { font: inherit; cursor: pointer; }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 10px; padding: 9px 14px; font-weight: 500;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 6px 8px; }
+.btn.ghost:hover { color: var(--ink); }
+.btn.danger { color: #b3261e; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.stat { background: var(--surface); padding: 12px 14px; display: grid; gap: 2px; }
+.stat b { font-size: 1.35rem; font-weight: 600; }
+.stat span { color: var(--muted); font-size: .8rem; }
+
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.tools input, .tools select {
+  font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px;
+}
+.tools input { flex: 1 1 220px; min-width: 0; }
+
+.status { color: var(--muted); font-size: .9rem; padding: 14px; border: 1px dashed var(--line); border-radius: 12px; text-align: center; }
+.status.err { color: #b3261e; border-color: #b3261e; }
+
+.list { display: grid; gap: 12px; }
+.wine { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.wine-head { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 14px 16px 10px; align-items: start; }
+.wine-head h2 { font-size: 1.35rem; line-height: 1.15; }
+.producer { color: var(--muted); font-size: .82rem; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.meta { color: var(--muted); font-size: .85rem; margin-top: 3px; }
+.score { text-align: right; display: grid; gap: 0; justify-items: end; }
+.score b { font-size: 1.7rem; font-weight: 600; line-height: 1; }
+.score span { font-size: .72rem; color: var(--muted); }
+
+.band { display: inline-block; font-size: .7rem; font-weight: 600; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+.band.b95 { background: var(--accent); color: var(--accent-ink); }
+.band.b90 { background: var(--accent-soft); color: var(--accent); }
+.band.b85 { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
+.band.b80 { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.band.b0 { background: color-mix(in srgb, var(--low) 18%, transparent); color: var(--low); }
+
+.vintages { border-top: 1px solid var(--line); }
+.vrow {
+  width: 100%; display: grid; grid-template-columns: 64px 1fr auto auto; gap: 10px; align-items: center;
+  padding: 10px 16px; background: none; border: 0; border-bottom: 1px solid var(--line); color: inherit; text-align: left;
+}
+.vrow:last-child { border-bottom: 0; }
+.vrow:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.vrow .yr { font-weight: 600; font-size: 1.05rem; }
+.vrow .sub { color: var(--muted); font-size: .82rem; }
+.vrow .pts { font-weight: 600; font-size: 1.1rem; min-width: 3.2ch; text-align: right; }
+.bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 4px; max-width: 220px; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.chev { color: var(--muted); transition: transform .15s; }
+.chev { font-size: .8rem; white-space: nowrap; }
+.vrow[aria-expanded="true"] .chev { color: var(--accent); }
+.tastings { background: color-mix(in srgb, var(--bg) 60%, var(--surface)); border-bottom: 1px solid var(--line); padding: 4px 16px 8px 90px; }
+.tasting { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: .9rem; flex-wrap: wrap; }
+.tasting .when { color: var(--muted); flex: 1 1 auto; }
+.tasting .p { font-weight: 600; }
+
+.fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); border-radius: 999px; padding: 14px 20px; box-shadow: 0 6px 20px rgb(0 0 0 / .18); z-index: 5; }
+
+dialog {
+  border: 1px solid var(--line); border-radius: 16px; padding: 0; width: min(520px, calc(100% - 24px));
+  background: var(--surface); color: var(--ink);
+}
+dialog::backdrop { background: rgb(0 0 0 / .45); }
+form.sheet { display: grid; gap: 14px; padding: 18px; }
+.sheet h2 { font-size: 1.5rem; }
+.field { display: grid; gap: 5px; }
+.field label { font-size: .8rem; font-weight: 600; color: var(--muted); }
+.field input, .field select {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px; width: 100%; min-width: 0;
+}
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rating-wrap { display: grid; grid-template-columns: 84px 1fr; gap: 12px; align-items: center; }
+.rating-wrap input[type=number] { font-size: 1.5rem; font-weight: 600; text-align: center; padding: 6px; }
+.rating-wrap input[type=range] { accent-color: var(--accent); width: 100%; }
+.rating-band { font-size: .8rem; color: var(--muted); }
+.hint { font-size: .82rem; color: var(--accent); min-height: 1.1em; }
+.form-err { color: #b3261e; font-size: .85rem; min-height: 1.1em; }
+.actions { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
+.actions .right { display: flex; gap: 8px; margin-left: auto; }
+.field .check input { width: 18px; height: 18px; padding: 0; margin: 0; flex: 0 0 auto; accent-color: var(--accent); }
+.check { display: flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--muted); }
+
+@media (max-width: 480px) {
+  h1 { font-size: 1.8rem; }
+  .vrow { grid-template-columns: 52px 1fr auto auto; padding: 10px 12px; }
+  .wine-head { padding: 12px 12px 8px; }
+  .tastings { padding-left: 74px; padding-right: 12px; }
+  .stat b { font-size: 1.15rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <h1>Wine Ratings</h1>
+      <p>100-point scale · grouped by wine, rated by vintage</p>
+    </div>
+  </header>
+
+  <div class="strip" aria-label="Photos">
+    <img src="img/p04.jpg" alt="Selfie in front of Bodegas Roda" loading="lazy">
+    <img src="img/p02.jpg" alt="Case of Roda Reserva 2012" loading="lazy">
+    <img src="img/p05.jpg" alt="Group in a barrel cellar" loading="lazy">
+    <img src="img/p03.jpg" alt="Izar-Leku, Artadi and Viña El Pisón bottles" loading="lazy">
+    <img src="img/p07.jpg" alt="Dinner at Lalú Wine" loading="lazy">
+    <img src="img/p06.jpg" alt="Friends at the pool" loading="lazy">
+    <img src="img/p08.jpg" alt="Friends with wine on the street at night" loading="lazy">
+    <img src="img/p09.jpg" alt="Three friends in matching t-shirts" loading="lazy">
+  </div>
+
+  <section class="stats" aria-label="Summary">
+    <div class="stat"><b class="num" id="s-wines">–</b><span>Wines</span></div>
+    <div class="stat"><b class="num" id="s-tastings">–</b><span>Tastings</span></div>
+    <div class="stat"><b class="num" id="s-avg">–</b><span>Average rating</span></div>
+  </section>
+
+  <div class="tools">
+    <input id="q" type="search" placeholder="Search producer, wine, region, grape, year" aria-label="Search">
+    <select id="sort" aria-label="Sort">
+      <option value="rating">Top rated</option>
+      <option value="recent">Recently added</option>
+      <option value="name">Producer A–Z</option>
+    </select>
+  </div>
+
+  <div id="status" class="status">Loading your wines…</div>
+  <div id="list" class="list"></div>
+</div>
+
+<button class="btn primary fab" id="add" type="button">+ Add wine</button>
+
+<dialog id="dlg" aria-labelledby="dlg-title">
+  <form class="sheet" id="form" novalidate>
+    <h2 id="dlg-title">Add a tasting</h2>
+    <div class="field">
+      <label for="f-producer">Producer</label>
+      <input id="f-producer" list="dl-producers" autocomplete="off" required placeholder="e.g. Bodegas Muga">
+    </div>
+    <div class="field">
+      <label for="f-name">Wine</label>
+      <input id="f-name" list="dl-names" autocomplete="off" required placeholder="e.g. Prado Enea Gran Reserva">
+    </div>
+    <div class="hint" id="f-match" aria-live="polite"></div>
+    <div class="row2">
+      <div class="field">
+        <label for="f-region">Region</label>
+        <input id="f-region" list="dl-regions" autocomplete="off" placeholder="e.g. Rioja">
+      </div>
+      <div class="field">
+        <label for="f-grape">Grape</label>
+        <input id="f-grape" list="dl-grapes" autocomplete="off" placeholder="e.g. Tempranillo">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="f-vintage">Vintage</label>
+        <input id="f-vintage" inputmode="numeric" maxlength="4" placeholder="e.g. 2015">
+        <label class="check" for="f-nv"><input type="checkbox" id="f-nv"> Non-vintage (NV)</label>
+      </div>
+      <div class="field">
+        <label for="f-price">Price paid in US$ (optional)</label>
+        <input id="f-price" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
+      </div>
+    </div>
+    <div class="field">
+      <label for="f-rating">Rating</label>
+      <div class="rating-wrap">
+        <input id="f-rating" type="number" min="50" max="100" step="1" value="90" class="num">
+        <div>
+          <input id="f-range" type="range" min="50" max="100" step="1" value="90" aria-label="Rating slider">
+          <div class="rating-band" id="f-band"></div>
+        </div>
+      </div>
+    </div>
+    <div class="form-err" id="f-err" role="alert"></div>
+    <div class="actions">
+      <button type="button" class="btn ghost danger" id="f-delete" hidden>Delete tasting</button>
+      <div class="right">
+        <button type="button" class="btn" id="f-cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="f-save">Save</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<datalist id="dl-producers"></datalist>
+<datalist id="dl-names"></datalist>
+<datalist id="dl-regions"></datalist>
+<datalist id="dl-grapes"></datalist>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
