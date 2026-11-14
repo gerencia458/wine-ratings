@@ -20,23 +20,71 @@
   const fmtDate = (ms) => new Date(ms).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
   const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
 
-  const cellarNotes = {
+  const cellarOverrides = {
     "artadi|vina de gain|2019": {
       label: "Drink now",
       window: "Now–2030",
       note: "At a good stage today. More time may soften it and add savory notes, but it is unlikely to improve dramatically.",
       serving: "Decant 45–60 minutes.",
+      basis: "Published guidance",
     },
     "artadi|vina de gain|2022": {
       label: "Hold or drink",
       window: "Best estimate: 2027–2030 · broader window: 2025–2032",
       note: "The structured tannins and bright acidity should integrate over the next 2–4 years.",
       serving: "If opening now, decant 1–2 hours.",
+      basis: "Published guidance",
     },
   };
 
+  const cellarProfiles = [
+    { match: /cabernet|nebbiolo|tannat|aglianico|barolo|barbaresco|bordeaux|petit verdot/, ages: [6, 15], kind: "structured red" },
+    { match: /tempranillo|sangiovese|syrah|shiraz|malbec|mourvedre|monastrell|touriga|rioja|ribera/, ages: [4, 12], kind: "structured red" },
+    { match: /merlot|grenache|garnacha|pinot noir|gamay|zinfandel|primitivo/, ages: [2, 8], kind: "medium-bodied red" },
+    { match: /riesling|chenin|chardonnay|semillon|viura|white burgundy/, ages: [2, 10], kind: "ageable white" },
+    { match: /sauvignon|albarino|verdejo|pinot grigio|pinot gris|rose|rosado/, ages: [0, 4], kind: "fresh white or rosé" },
+    { match: /champagne|cava|sparkling|espumoso|prosecco/, ages: [1, 8], kind: "sparkling wine" },
+  ];
+
+  function estimatedCellarAdvice(wine, vintage) {
+    if (vintage === "NV") return {
+      label: "Drink now",
+      window: `Best estimate: now–${thisYear + 3}`,
+      note: "Non-vintage wine is generally blended for current drinking, though good storage can preserve it for a few years.",
+      serving: "Open when ready and serve at the appropriate temperature for its style.",
+      basis: "Automatic estimate · non-vintage",
+    };
+
+    const year = Number(vintage);
+    const identity = norm([wine.grape, wine.region, wine.name].join(" "));
+    const profile = cellarProfiles.find(x => x.match.test(identity)) || { ages: [2, 8], kind: "general wine" };
+    const [startAge, endAge] = profile.ages;
+    const start = year + startAge;
+    const end = year + endAge;
+    const label = thisYear < start ? "Hold" : thisYear >= end - 1 ? "Drink now" : "Drink or hold";
+    const note = thisYear < start
+      ? `Likely to integrate and soften with more bottle age; start checking it around ${start}.`
+      : thisYear > end
+        ? "Likely at or beyond its estimated peak; further aging carries more risk than reward."
+        : `Inside its estimated drinking window, with room to develop through about ${end}.`;
+    const serving = profile.kind === "structured red" ? "If opening now, decant 45–90 minutes."
+      : profile.kind === "medium-bodied red" ? "If opening now, decant 30–60 minutes."
+      : profile.kind === "ageable white" ? "Serve cool and let it open for 15–30 minutes."
+      : profile.kind === "fresh white or rosé" || profile.kind === "sparkling wine" ? "Serve well chilled; no decant needed."
+      : "Let it breathe for about 30 minutes after opening.";
+    const basisName = wine.grape || wine.region || "limited wine details";
+    return {
+      label,
+      window: `Estimated window: ${start}–${end}`,
+      note,
+      serving,
+      basis: `Automatic estimate · ${basisName}`,
+    };
+  }
+
   function cellarAdvice(wine, vintage) {
-    return cellarNotes[`${norm(wine.producer)}|${norm(wine.name)}|${vintage}`] || null;
+    return cellarOverrides[`${norm(wine.producer)}|${norm(wine.name)}|${vintage}`]
+      || estimatedCellarAdvice(wine, vintage);
   }
 
   let sb = null;
@@ -165,6 +213,7 @@
                   <div class="cellar-head"><b>${esc(cellar.label)}</b><span>${esc(cellar.window)}</span></div>
                   <p>${esc(cellar.note)}</p>
                   <p class="cellar-serving">${esc(cellar.serving)} Store around 12–16°C; if kept in a warm room, drink sooner.</p>
+                  <p class="cellar-basis">${esc(cellar.basis)}</p>
                 </aside>` : ""}
                 ${v.list.map(t => `
                 <div class="tasting">
