@@ -131,6 +131,12 @@ button { font: inherit; cursor: pointer; }
 .chev { font-size: .8rem; white-space: nowrap; }
 .vrow[aria-expanded="true"] .chev { color: var(--accent); }
 .tastings { background: color-mix(in srgb, var(--bg) 60%, var(--surface)); border-bottom: 1px solid var(--line); padding: 4px 16px 8px 90px; }
+.cellar-note { margin: 8px 0 12px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); border-radius: 10px; background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.cellar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 5px; }
+.cellar-head b { color: var(--accent); }
+.cellar-head span { color: var(--muted); font-size: 12px; text-align: right; }
+.cellar-note p { margin: 3px 0; line-height: 1.4; }
+.cellar-serving { color: var(--muted); font-size: 12px; }
 .tasting { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: .9rem; flex-wrap: wrap; }
 .tasting .when { color: var(--muted); flex: 1 1 auto; }
 .tasting .p { font-weight: 600; }
@@ -167,6 +173,8 @@ form.sheet { display: grid; gap: 14px; padding: 18px; }
   .vrow { grid-template-columns: 52px 1fr auto auto; padding: 10px 12px; }
   .wine-head { padding: 12px 12px 8px; }
   .tastings { padding-left: 74px; padding-right: 12px; }
+  .cellar-head { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .cellar-head span { text-align: left; }
   .stat b { font-size: 1.15rem; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

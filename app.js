@@ -20,6 +20,25 @@
   const fmtDate = (ms) => new Date(ms).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
   const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
 
+  const cellarNotes = {
+    "artadi|vina de gain|2019": {
+      label: "Drink now",
+      window: "Now–2030",
+      note: "At a good stage today. More time may soften it and add savory notes, but it is unlikely to improve dramatically.",
+      serving: "Decant 45–60 minutes.",
+    },
+    "artadi|vina de gain|2022": {
+      label: "Hold or drink",
+      window: "Best estimate: 2027–2030 · broader window: 2025–2032",
+      note: "The structured tannins and bright acidity should integrate over the next 2–4 years.",
+      serving: "If opening now, decant 1–2 hours.",
+    },
+  };
+
+  function cellarAdvice(wine, vintage) {
+    return cellarNotes[`${norm(wine.producer)}|${norm(wine.name)}|${vintage}`] || null;
+  }
+
   let sb = null;
   let wines = new Map();      // id -> {id, producer, name, region, grape}
   let tastings = new Map();   // id -> {id, wineId, vintage, rating, price, createdAt}
@@ -132,6 +151,7 @@
             const key = g.w.id + "|" + v.vintage;
             const isOpen = open.has(key);
             const vb = band(v.avg);
+            const cellar = cellarAdvice(g.w, v.vintage);
             const sub = [v.list.length > 1 ? `${v.list.length} tastings` : "1 tasting", v.lastPrice].filter(Boolean).join(" · ");
             return `<button class="vrow" type="button" data-toggle="${esc(key)}" aria-expanded="${isOpen}">
                 <span class="yr num">${esc(v.vintage)}</span>
@@ -140,7 +160,13 @@
                 <span class="pts num">${fmtScore(+v.avg.toFixed(1))}</span>
                 <span class="chev" aria-hidden="true">Edit ›</span>
               </button>
-              ${isOpen ? `<div class="tastings">${v.list.map(t => `
+              ${isOpen ? `<div class="tastings">
+                ${cellar ? `<aside class="cellar-note">
+                  <div class="cellar-head"><b>${esc(cellar.label)}</b><span>${esc(cellar.window)}</span></div>
+                  <p>${esc(cellar.note)}</p>
+                  <p class="cellar-serving">${esc(cellar.serving)} Store around 12–16°C; if kept in a warm room, drink sooner.</p>
+                </aside>` : ""}
+                ${v.list.map(t => `
                 <div class="tasting">
                   <span class="p num">${t.rating}</span>
                   <span class="when">${fmtDate(t.createdAt)}${t.price != null && t.price !== "" ? " · " + esc(fmtPrice(t.price)) : ""}</span>
